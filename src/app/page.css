@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+*{
+  font-family: 'Inter', sans-serif;
+}
+
+:root{
+  --black: #0000;
+  --gray: #9D9D9D;
+  --white: #FFFFFF;
+  --redwine: #BE2633;
+  --pink: #E06F8B;
+  --darkbrown: #493C2B;
+  --lightbrown: #A46422;
+  --orange: #EB8931;
+  --yellow: #F7E26B;
+  --lightblue: #31A2F2;
+  --darkblue: #2F484E;
+  --lightgreen: #005784;
+  --darkestblue: #1B2632;
+  --darkgreen: #44891A;
+  --lightgreen: #A3CE27;
+}
+
+.container{
+  margin: auto;
+}
+
+.header{
+  width: 50%;
+  background-color: var(--darkestblue);
+  margin: auto;
+  border-radius: 0 0px 15px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+nav ul{
+  display: flex;
+  list-style: none;
+  gap: 20px;
+}
+
+nav ul li:hover{
+  text-decoration: underline;
+  transition: .3s;
+}
+.oro-player{
+  display: flex;
+  padding: 0 15px;
+  border-radius: 15px;
+  background-color: var(--darkblue);
+  gap: 20px;
+  width: 100%;
+  justify-content: space-between;
+}
+.oro-data{
+  align-items: center;
+  display: flex;
+  width: 100%;
+  font-size: 20px;
+}
+.game-menu{
+  display: flex;
+  position: relative;
+}
+.menu{
+  flex-direction: column;
+  z-index: 100;
+  height: auto;
+  margin: 10px 0;
+  border-radius: 0 20px 20px 0;
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  background-color: var(--darkestblue);
+}
+.ul-menu{
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.plants-item{
+  position: relative;
+  display: flex;
+  gap: 10px;
+  background-color: var(--darkblue);
+  padding: 15px;
+  border-radius: 20px;
+  font-size: 20px;
+}
+.plants-item.selected{
+  background-color: var(--lightblue);
+}
+.plants-item:hover{
+  cursor: pointer;
+  transition: .3s;
+  background-color: var(--lightblue);
+}
+.plants-item img{
+  width: 60px;
+}
+.plants-item p{
+  align-items: center;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+.item-quantity{
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  background-color: var(--orange);
+  padding: 10px 15px;
+  border-radius: 50px;
+  box-shadow: 0px 3px 5px rgba(0, 0, 0, 0.24);
+}
+.exchange-zone{
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  gap: 20px;
+}
+.exchange-button{
+  cursor: pointer;
+  padding: 10px 15px;
+  border-radius: 10px;
+  font-size: 20px;
+  color: white;
+  background-color: var(--lightblue);
+  border: none;
+}
+.exchange-button.comprar:hover{
+  background-color: var(--darkgreen);
+  transition: .3s;
+}
+.exchange-button.vender:hover{
+  background-color: var(--redwine);
+  transition: .3s;
+}
+/* Contenedor principal */
+.container-modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Botón para abrir el modal */
+.open-btn {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* Fondo del modal */
+.modal-overlay {
+  position: fixed;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Contenido del modal */
+.modal-content {
+  background: white;
+  color: black;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  width: 600px;
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+/* Botón de cerrar */
+.close-btn {
+  margin-top: 10px;
+  padding: 8px 15px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Animación de entrada desde arriba */
+@keyframes slideIn {
+  from {
+      transform: translateY(-100%);
+      opacity: 0;
+  }
+  to {
+      transform: translateY(0);
+      opacity: 1;
+  }
+}
+
+/* Efecto de fadeIn en el fondo */
+@keyframes fadeIn {
+  from {
+      opacity: 0;
+  }
+  to {
+      opacity: 1;
+  }
+}
+
+.ul-items-buy{
+  list-style: none;
+  margin: 20px;
+  justify-content: center;
+  display: flex;
+  gap: 20px;
+}
+.item-buy{
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  cursor: pointer;
+  background-color: var(--gray);
+  border-radius: 20px;
+  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.247);
+}
+.item-buy img{
+  margin: 20px auto 0 auto;
+}
+.item-buy:hover{
+  background-color: gray;
+}
+.item-info{
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 15px;
+}
+.item-sell{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sell-container-item{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.product-info{
+  cursor: pointer;
+  width: 100%;
+  border-radius: 20px;
+  padding: 5px 0;
+}
+.ul-frutos-menu{
+  color: white;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fruto-item-list{
+  background-color: var(--darkblue);
+  height: 100%;
+  padding: 10px;
+  list-style: none;
+  margin: 0;
+  border-radius: 15px;
+  display: flex;
+  gap: 10px;
+  font-size: 25px;
+  justify-content: center;
+  align-items: center;
+}
+.fruto-item-list span{
+  padding: 10px;
+}
+.fruto-item-list img{
+  margin: 0;
+  padding: 0;
+}
+.object{
+  cursor: pointer;
+}
+.object.active{
+  background-color: var(--lightblue);
+}
