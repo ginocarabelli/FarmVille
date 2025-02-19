@@ -1,10 +1,8 @@
 "use client"
-import Image from "next/image";
 import styles from "./page.css";
 import { frutos as frutosData, oro as Gold, objects, semillas as semillasData} from "@/data/Semillas";
 import { useEffect, useState } from "react";
 import Game from "./Game"
-import { act } from "react";
 
 export default function Home() {
   const [oro, setOro] = useState(Gold);
@@ -22,22 +20,71 @@ export default function Home() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [modalMode, setModalMode] = useState(0);
+  
+  const [selectedSeed, setSelectedSeed] = useState(1);
 
-  function openModal(mode){
-    setIsOpen(true);
-    setModalMode(mode);
-  }
+  const [intervalId, setIntervalId] = useState(null); // Para almacenar el ID del intervalo
+  const [tiempoRestante, setTiempoRestante] = useState('');
+
+  const updateTimeRemaining = (claimDate, interval) => {
+    const actualDate = new Date();
+    const diferenciaMs = claimDate - actualDate;
+
+    if (diferenciaMs > 0) {
+      // Calcular horas, minutos y segundos restantes
+      const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
+      const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60));
+      const segundos = Math.floor((diferenciaMs % (1000 * 60)) / 1000);
+
+      // Actualizar el tiempo restante en la UI
+      setTiempoRestante(`${horas}hs ${minutos}min ${segundos}seg`);
+    } else {
+      // Cuando llega a 0, actualizar oro y restablecer la fecha de reclamación
+      setTiempoRestante('+100 de Oro!');
+
+      // Añadir oro
+      setOro((prevOro) => {
+        const newGoldAmount = prevOro + 50;
+        localStorage.setItem('oro', newGoldAmount);
+        return newGoldAmount;
+      });
+
+      // Actualizar la fecha de reclamación para dentro de 1 hora
+      const newClaimDate = new Date();
+      newClaimDate.setHours(newClaimDate.getHours() + 1);
+      localStorage.setItem('nextGoldClaim', newClaimDate);
+
+      // Reiniciar el intervalo
+      clearInterval(interval);
+      const newInterval = setInterval(() => {
+        updateTimeRemaining(newClaimDate, newInterval);
+      }, 1000);
+      setIntervalId(newInterval);
+    }
+  };
 
   function buyItem(product){
     if(oro >= product.valor){
-      let semillas = JSON.parse(localStorage.getItem('semillas'));
-      semillas[product.id-1].semillas += 1;
-
       const newGold = oro - product.valor;
-      setOro(newGold)
-      setSemillas(semillas);
-      localStorage.setItem('oro', newGold);
-      localStorage.setItem('semillas', JSON.stringify(semillas))
+      switch(product.type){
+        case 1:
+          let semillas = JSON.parse(localStorage.getItem('semillas'));
+          semillas[product.id-1].semillas += 1;
+
+          setOro(newGold)
+          setSemillas(semillas);
+          localStorage.setItem('oro', newGold);
+          localStorage.setItem('semillas', JSON.stringify(semillas))
+          break;
+        case 3:
+          let objetos = JSON.parse(localStorage.getItem('objetos'));
+          objetos[product.id-1].cantidad += 1;
+
+          setOro(newGold)
+          setObjetos(objetos);
+          localStorage.setItem('oro', newGold);
+          localStorage.setItem('objetos', JSON.stringify(objetos))
+      }
     } else{
       setMensaje("No tienes dinero suficiente!"); // Oculta el mensaje después de 2 segundos
       setTimeout(() => {
@@ -63,9 +110,6 @@ export default function Home() {
       }, 2000);
     }
   }
-
-  const [intervalId, setIntervalId] = useState(null); // Para almacenar el ID del intervalo
-  const [tiempoRestante, setTiempoRestante] = useState('');
 
   useEffect(() => {
     // Recuperar objetos y oro de localStorage
@@ -104,57 +148,55 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const updateTimeRemaining = (claimDate, interval) => {
-    const actualDate = new Date();
-    const diferenciaMs = claimDate - actualDate;
-
-    if (diferenciaMs > 0) {
-      // Calcular horas, minutos y segundos restantes
-      const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
-      const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60));
-      const segundos = Math.floor((diferenciaMs % (1000 * 60)) / 1000);
-
-      // Actualizar el tiempo restante en la UI
-      setTiempoRestante(`${horas}hs ${minutos}min ${segundos}seg`);
-    } else {
-      // Cuando llega a 0, actualizar oro y restablecer la fecha de reclamación
-      setTiempoRestante('+100 de Oro!');
-
-      // Añadir oro
-      setOro((prevOro) => {
-        const newGoldAmount = prevOro + 100;
-        localStorage.setItem('oro', newGoldAmount);
-        return newGoldAmount;
-      });
-
-      // Actualizar la fecha de reclamación para dentro de 1 hora
-      const newClaimDate = new Date();
-      newClaimDate.setHours(newClaimDate.getHours() + 1);
-      localStorage.setItem('nextGoldClaim', newClaimDate);
-
-      // Reiniciar el intervalo
-      clearInterval(interval);
-      const newInterval = setInterval(() => {
-        updateTimeRemaining(newClaimDate, newInterval);
-      }, 1000);
-      setIntervalId(newInterval);
-    }
-  };
-
   useEffect(() => {
     localStorage.setItem('semillas', JSON.stringify(semillas));
     localStorage.setItem('frutos', JSON.stringify(frutos));
     localStorage.setItem('objetos', JSON.stringify(objetos));
   }, [semillas, frutos, objetos])
 
-  const [selectedSeed, setSelectedSeed] = useState(1);
-
   return (
     <div className="container">
+      <aside className="menu">
+          <h3 className="header-title" style={{textAlign: "center"}}>Inventario</h3>
+          <h4 style={{textAlign: "center", backgroundColor: "var(--darkblue)", padding: "10px 0", borderRadius: "10px", color: tiempoRestante === '+100 de Oro!' ? 'var(--yellow)' : 'white'}}>Oro Gratis: {tiempoRestante}</h4>
+          <div className="oro-player">
+            <img src="../assets/Coin.png" alt="Oro" width="80px"/>
+            <p className="oro-data">{oro}</p>
+          </div>
+          
+          <div className="exchange-zone">
+            <button className="exchange-button comprar" onClick={() => {setIsOpen(true); setModalMode(1)}}>Comprar</button>
+            <button className="exchange-button vender" onClick={() => {setIsOpen(true); setModalMode(2)}}>Vender</button>
+          </div>
+          <ul className="ul-menu">
+              {semillas.map((s) => (
+                <li className={selectedSeed == s.id ? "plants-item selected" : "plants-item"} key={s.id} onClick={() => {setSelectedSeed(s.id); setSelectedObject(0);} }>
+                  <img src={s.semillaSrc} alt={s.planta}/>
+                  <span className="item-quantity">{s.semillas}</span>
+                  <p>{s.planta} - {s.time / 100} Seg.</p>
+                </li>
+              ))}
+          </ul>
+          <ul className="ul-frutos-menu">
+              {frutos.map((f) => (
+                <li className="fruto-item-list" key={f.id}>
+                  <img src={f.plantaSrc} alt={f.semilla.planta} width="60px"/>
+                  <span className="fruto-quantity">{f.cantidad}</span>
+                </li>
+              ))}
+              {objetos.map((o) => (
+                o.cantidad === 0 ? "" : 
+                <li className={selectedObject === o.id ? "fruto-item-list object active" : "fruto-item-list object"} key={o.id} onClick={() => {{selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}; setSelectedSeed(0)}}>
+                  <img src={o.objSrc} alt={o.objeto} width="60px"/>
+                  <span className="fruto-quantity">{o.cantidad}</span>
+                </li>
+              ))}
+          </ul>
+      </aside>
       {isOpen && (
           <div className="modal-overlay">
               <div className="modal-content">
-                  <h2 style={{display: "flex", alignItems: "center", justifyContent: "center", gap: "10px"}}>{modalMode === 1 ? 'COMPRA' : 'VENTA'} <span style={{display: "flex", alignItems: "center"}}><img src="../assets/Coin.png" alt="Oro" width="50px" /> {oro}</span></h2>
+                  <h2 style={{display: "flex", alignItems: "center", justifyContent: "center", gap: "10px"}}>{modalMode === 1 ? 'COMPRAR' : 'VENDER'} <span style={{display: "flex", alignItems: "center"}}><img src="../assets/Coin.png" alt="Oro" width="50px" /> {oro}</span></h2>
                   {modalMode === 1 ? 
                     <div className="items-container">
                       <ul className="ul-items-buy">
@@ -218,53 +260,20 @@ export default function Home() {
               <a href="#">How to play</a>
             </li>
             <li>
-              <a href="#">About Me</a>
-            </li>
-            <li>
               <a href="#">Portfolio</a>
             </li>
           </ul>
         </nav>
       </header>
       <div className="game-menu">
-        <aside className="menu">
-          <h3 className="header-title" style={{textAlign: "center"}}>Inventario</h3>
-          <h4 style={{textAlign: "center", backgroundColor: "var(--darkblue)", padding: "10px 0", borderRadius: "10px", color: tiempoRestante === '+100 de Oro!' ? 'var(--yellow)' : 'white'}}>Oro Gratis: {tiempoRestante}</h4>
-          <div className="oro-player">
-            <img src="../assets/Coin.png" alt="Oro" width="80px"/>
-            <p className="oro-data">{oro}</p>
-          </div>
-          
-          <div className="exchange-zone">
-            <button className="exchange-button comprar" onClick={() => openModal(1)}>Comprar</button>
-            <button className="exchange-button vender" onClick={() => openModal(2)}>Vender</button>
-          </div>
-          <ul className="ul-menu">
-              {semillas.map((s) => (
-                <li className={selectedSeed == s.id ? "plants-item selected" : "plants-item"} key={s.id} onClick={() => {setSelectedSeed(s.id); setSelectedObject(0);} }>
-                  <img src={s.semillaSrc} alt={s.planta}/>
-                  <span className="item-quantity">{s.semillas}</span>
-                  <p>{s.planta} - {s.time / 100} Seg.</p>
-                </li>
-              ))}
-          </ul>
-          <ul className="ul-frutos-menu">
-              {frutos.map((f) => (
-                <li className="fruto-item-list" key={f.id}>
-                  <img src={f.plantaSrc} alt={f.semilla.planta} width="60px"/>
-                  <span className="fruto-quantity">{f.cantidad}</span>
-                </li>
-              ))}
-              {objetos.map((o) => (
-                o.cantidad === 0 ? "" : 
-                <li className={selectedObject === o.id ? "fruto-item-list object active" : "fruto-item-list object"} key={o.id} onClick={() => {{selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}; setSelectedSeed(0)}}>
-                  <img src={o.objSrc} alt={o.objeto} width="60px"/>
-                  <span className="fruto-quantity">{o.cantidad}</span>
-                </li>
-              ))}
-          </ul>
-        </aside>
-        <Game plantToFarm={selectedSeed} semillas={semillas} setSemillas={setSemillas} frutos={frutos} setFrutos={setFrutos} objetos={objetos} setObjetos={setObjetos} selectedObject={selectedObject}/>
+        <Game 
+        plantToFarm={selectedSeed} 
+        semillas={semillas} setSemillas={setSemillas} 
+        frutos={frutos} setFrutos={setFrutos} 
+        objetos={objetos} setObjetos={setObjetos} selectedObject={selectedObject}
+        tiempoRestante={tiempoRestante} setTiempoRestante={setTiempoRestante}
+        intervalId={intervalId} setIntervalId={setIntervalId}
+        />
       </div>
     </div>
   );

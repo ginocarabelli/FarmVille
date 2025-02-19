@@ -1,5 +1,5 @@
 "use client"
-import { objects, oro } from "@/data/Semillas";
+import { objects, oro, renderDivsConCultivos } from "@/data/Semillas";
 import game from "./game.css";
 import { useEffect, useState } from "react";
 import { act } from "react";
@@ -29,16 +29,56 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
         return "box";
     }
 
-    useEffect(() => {
-        
-        const storedParcelas = JSON.parse(localStorage.getItem('parcelas')) || []
-        setParcelas(storedParcelas)
-        console.log(storedParcelas)
-
+    function renderStoredParcelas(storedParcelas) {
         storedParcelas.forEach(p => {
             const divsParcela = Array.from(document.querySelectorAll('.box')).find(div => div.id === p.id)
             divsParcela.className = 'box-cultivo';
         })
+    }
+
+    function convertGrassToDirt(semillas, plantToFarm, e, farmDate) {
+        const div = document.createElement('div'); // CREO UNA "PLANTA" DENTRO DE LA PARCELA
+        div.classList.add('cultivo'); // ESTABLEZCO LA CLASE CULTIVO PARA DIFERENCIARSE DE SU PADRE
+        div.setAttribute('id', e.id)
+        if(semillas[plantToFarm-1].id === 1){  // ESTABLEZCO ATRIBUTOS NECESARIOS PARA LA DIFERENCIACIÓN DE CULTIVO
+            div.style.background = 'url(/assets/Girasol1.png)';
+            div.classList.add('cultivated-girasol');
+        } else if(semillas[plantToFarm-1].id === 2){
+            div.style.background = 'url(/assets/Zanahoria1.png)';
+            div.classList.add('cultivated-zanahoria');
+        }
+
+        const pCountdown = document.createElement('p');
+        pCountdown.style.display = 'none';
+        pCountdown.classList.add('countdown');
+        div.appendChild(pCountdown);
+
+        const timerId = setInterval(() => {
+            const now = new Date().getTime();
+            const timeLeft = farmDate.getTime() - now;
+            if (timeLeft <= 0) {
+                clearInterval(timerId);
+                pCountdown.style.display = "none";
+                div.style.background = `url(/assets/${semillas[plantToFarm-1].planta}2.png)`;
+                div.classList.add('finished')
+            } else {
+                const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
+                const seconds = Math.floor((timeLeft / 1000) % 60);
+                pCountdown.style.display = 'flex';
+                pCountdown.textContent = `${hours}h ${minutes}m ${seconds}s`;
+            }
+        }, 1000); // ACTUALIZO EL TIEMPO RESTANTE PARA LA COSECHA
+        
+        return div;
+    }
+
+    useEffect(() => {
+        const storedParcelas = JSON.parse(localStorage.getItem('parcelas')) || []
+        setParcelas(storedParcelas)
+        console.log(storedParcelas)
+
+        renderStoredParcelas(storedParcelas)
         
         const storedCultivos = JSON.parse(localStorage.getItem('cultivos'));
 
@@ -47,48 +87,8 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
             const divs = document.querySelectorAll('.box-cultivo');
             const divsConCultivos = Array.from(divs).filter(div => storedCultivos.some(cultivo => cultivo.parcela === div.id.toString()));
             
-            divsConCultivos.forEach(div => {
-                const respectivoCultivo = storedCultivos.filter(c => c.parcela === div.id)
-                
-                const farmDate = new Date(respectivoCultivo[0].farmDate)
-                
-                if(farmDate > new Date()){
-                    const intervalId = setInterval(() => {
-                        const date = new Date();
-                        let timeLeft = farmDate - date;
-                        let hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-                        let minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
-                        let seconds = Math.floor((timeLeft / 1000) % 60);
-    
-                        if(timeLeft > 0){
-                            
-                            div.innerHTML = `
-                            <div class="cultivo cultivated-${respectivoCultivo[0].type === 1 ? 'girasol' : 'zanahoria'}" id=${respectivoCultivo[0].parcela} style="background: url(../assets/${respectivoCultivo[0].type === 1 ? 'Girasol' : 'Zanahoria'}1.png);">
-                                <p class="countdown" style="display: flex;">${hours}h ${minutes}m ${seconds}s</p>
-                            </div>
-                            `
-                        } else {
-                            clearInterval(intervalId)
-                            div.innerHTML = `
-                            <div class="cultivo cultivated-${respectivoCultivo[0].type === 1 ? 'girasol' : 'zanahoria'} finished" id=${respectivoCultivo[0].parcela} style="background: url(../assets/${respectivoCultivo[0].type === 1 ? 'Girasol' : 'Zanahoria'}2.png);">
-                                <p class="countdown" style="display: none;"></p>
-                            </div>
-                            `
-                        }
-                        
-                    },1000)
-                } else {
-                    div.innerHTML = `
-                        <div class="cultivo cultivated-${respectivoCultivo[0].type === 1 ? 'girasol' : 'zanahoria'} finished" id=${respectivoCultivo[0].parcela} style="background: url(../assets/${respectivoCultivo[0].type === 1 ? 'Girasol' : 'Zanahoria'}2.png);">
-                            <p class="countdown" style="display: none;"></p>
-                        </div>
-                    `
-                }
-                
-            })
+            renderDivsConCultivos(divsConCultivos, storedCultivos)
         }
-
-        console.log(parcelas)
     }, []);
 
     function handlePlant(e) {
@@ -107,21 +107,8 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
             const date = new Date();
             date.setSeconds(date.getSeconds() + (updatedSemillas[plantToFarm-1].time/100))
 
-            const div = document.createElement('div'); // CREO UNA "PLANTA" DENTRO DE LA PARCELA
-            div.classList.add('cultivo'); // ESTABLEZCO LA CLASE CULTIVO PARA DIFERENCIARSE DE SU PADRE
-            div.setAttribute('id', e.id)
-            if(semillas[plantToFarm-1].id === 1){  // ESTABLEZCO ATRIBUTOS NECESARIOS PARA LA DIFERENCIACIÓN DE CULTIVO
-                div.style.background = 'url(/assets/Girasol1.png)';
-                div.classList.add('cultivated-girasol');
-            } else if(semillas[plantToFarm-1].id === 2){
-                div.style.background = 'url(/assets/Zanahoria1.png)';
-                div.classList.add('cultivated-zanahoria');
-            }
-            const pCountdown = document.createElement('p');
-            pCountdown.style.display = 'none';
-            pCountdown.classList.add('countdown');
+            const div = convertGrassToDirt(semillas, plantToFarm, e, date);
             e.appendChild(div) // AÑADO EL CULTIVO A SU PARCELA PADRE 
-            div.appendChild(pCountdown);
 
             const cultivo = {
                 parcela: e.id,
@@ -134,23 +121,6 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
                 localStorage.setItem('cultivos', JSON.stringify(nuevosCultivos));
                 return nuevosCultivos;
             });
-
-            const timerId = setInterval(() => {
-                const now = new Date().getTime();
-                const timeLeft = date.getTime() - now;
-                if (timeLeft <= 0) {
-                    clearInterval(timerId);
-                    pCountdown.style.display = "none";
-                    div.style.background = `url(/assets/${semillas[plantToFarm-1].planta}2.png)`;
-                    div.classList.add('finished')
-                } else {
-                    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-                    const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
-                    const seconds = Math.floor((timeLeft / 1000) % 60);
-                    pCountdown.style.display = 'flex';
-                    pCountdown.textContent = `${hours}h ${minutes}m ${seconds}s`;
-                }
-            }, 1000); // ACTUALIZO EL TIEMPO RESTANTE PARA LA COSECHA
 
         } else if (e.className.includes("finished")) { // CONSULTO SI EL CULTIVO ES ZANAHORIA O GIRASOL PARA SU RECOLECCION
             const plantIndex = e.className.includes("girasol") ? 0 : 1;

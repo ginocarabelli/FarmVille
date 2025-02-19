@@ -27,7 +27,6 @@ button:hover{
 .container{
   margin: auto;
 }
-
 .header{
   width: 50%;
   background-color: var(--darkestblue);
@@ -75,7 +74,7 @@ nav ul li:hover{
   top: 13%;
   z-index: 100;
   height: auto;
-  margin: 10px 0;
+  margin: auto;
   border-radius: 0 20px 20px 0;
   display: flex;
   gap: 20px;
