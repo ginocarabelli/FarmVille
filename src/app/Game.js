@@ -1,7 +1,8 @@
 "use client"
-import { objects } from "@/data/Semillas";
+import { objects, oro } from "@/data/Semillas";
 import game from "./game.css";
 import { useEffect, useState } from "react";
+import { act } from "react";
 
 const gridSize = 10;
 
@@ -11,14 +12,16 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
     const [cultivos, setCultivos] = useState([]);
 
     const cultivoRanges = [
-        [11, 13], [21, 23], [31, 33], // Primer bloque
-        [16, 18], [26, 28], [36, 38]  // Segundo bloque
+        [11, 13], [21, 23], [31, 33]
     ];
 
     function renderDirt(i) {
     
         for (const [start, end] of cultivoRanges) {
             if (i >= start && i <= end) {
+                return "box-cultivo initial";
+            } 
+            else if (parcelas !== null && parcelas.some(p => p.id === i)) {
                 return "box-cultivo";
             }
         }
@@ -27,6 +30,15 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
     }
 
     useEffect(() => {
+        
+        const storedParcelas = JSON.parse(localStorage.getItem('parcelas')) || []
+        setParcelas(storedParcelas)
+        console.log(storedParcelas)
+
+        storedParcelas.forEach(p => {
+            const divsParcela = Array.from(document.querySelectorAll('.box')).find(div => div.id === p.id)
+            divsParcela.className = 'box-cultivo';
+        })
         
         const storedCultivos = JSON.parse(localStorage.getItem('cultivos'));
 
@@ -75,16 +87,19 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
                 
             })
         }
+
+        console.log(parcelas)
     }, []);
 
     function handlePlant(e) {
         const updatedSemillas = [...semillas]; // OBTENGO LAS SEMILLAS EN FORMA DE ARRAY
         const updatedFrutos = [...frutos]; // OBTENGO LOS FRUTOS EN FORMA DE ARRAY
         const updatedObjetos = [...objetos]; // OBTENGO LOS OBJETOS EN FORMA DE ARRAY
-        if (e.className === "box-cultivo" && // VERIFICO QUE SEA UNA PARCELA DE CULTIVO
+        if (
+            selectedObject === 0 && // VERIFICO QUE NO HAYA OBJETOS SELECCIONADOS
+            e.className.includes("box-cultivo") && // VERIFICO QUE SEA UNA PARCELA DE CULTIVO
             e.className !== "box-cultivo cultivado" && // VERIFICO QUE NO ESTÉ CULTIVADA LA PARCELA
-            semillas[plantToFarm-1].semillas > 0 && // VERIFICO QUE LA SEMILLA NO SEA 0 O MENOS
-            selectedObject === undefined
+            semillas[plantToFarm-1].semillas > 0 // VERIFICO QUE LA SEMILLA NO SEA 0 O MENOS
         ) {
             updatedSemillas[plantToFarm-1].semillas -= 1; //RESTO LAS SEMILLAS DE LA PLANTA SELECCIONADA
             setSemillas(updatedSemillas); // ACTUALIZO EL LOCALSTORAGE DE SEMILLAS
@@ -139,18 +154,18 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
 
         } else if (e.className.includes("finished")) { // CONSULTO SI EL CULTIVO ES ZANAHORIA O GIRASOL PARA SU RECOLECCION
             const plantIndex = e.className.includes("girasol") ? 0 : 1;
-            if(plantIndex === 0){ // SI ES GIRASOL QUE DEVUELVA +3 FRUTOS
-                updatedFrutos[plantIndex].cantidad += 3;
-            } else { // SI ES ZANAHORIA QUE DEVUELVA 1
-                updatedFrutos[plantIndex].cantidad += 2;
-            }
+            updatedFrutos[plantIndex].cantidad += 1;
             setFrutos(updatedFrutos);
             e.remove();
-            setCultivos(cultivos => cultivos.filter(c => c.parcela.toString() !== e.id))
-        } else if(selectedObject !== undefined && e.className !== 'box-cultivo') {
+            setCultivos(cultivos => {
+                const nuevosCultivos = cultivos.filter(c => c.parcela.toString() !== e.id);
+                localStorage.setItem('cultivos', JSON.stringify(nuevosCultivos));
+                return nuevosCultivos;
+            });
+        } else if(selectedObject !== 0) {
             switch (selectedObject){
                 case 1:
-                    if(updatedObjetos[selectedObject-1].cantidad >= 1)
+                    if(updatedObjetos[selectedObject-1].cantidad >= 1 && e.className === 'box')
                     {
                         e.className = 'box-cultivo';
                         setParcelas(prevParcelas => {
@@ -167,6 +182,27 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
                         localStorage.setItem("objetos", JSON.stringify(updatedObjetos));
                         localStorage.setItem("parcelas", JSON.stringify(parcelas));
                         console.log(updatedObjetos)
+                    }
+                    break;
+                case 2:
+                    if(updatedObjetos[selectedObject-1].cantidad >= 1 && e.className === 'box-cultivo')
+                    {
+                        e.className = 'box';
+                        setParcelas(prevParcelas => {
+                            const nuevasParcelas = prevParcelas.filter(p => p.id !== e.id);
+                            localStorage.setItem('parcelas', JSON.stringify(nuevasParcelas));
+                            return nuevasParcelas;
+                        })
+                        updatedObjetos[selectedObject-1].vidaUtil -= 1
+                        if(updatedObjetos[selectedObject-1].vidaUtil === 0){
+                            updatedObjetos[selectedObject-1].cantidad -= 1;
+                            updatedObjetos[selectedObject-1].vidaUtil = 5;
+                        }
+                        setObjetos(updatedObjetos)
+                        localStorage.setItem("objetos", JSON.stringify(updatedObjetos));
+                        localStorage.setItem("parcelas", JSON.stringify(parcelas));
+                    } else if(e.className.includes('initial')){
+                        alert('No puedes eliminar una parcela Inicial')
                     }
             }
         }

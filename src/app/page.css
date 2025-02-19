@@ -21,7 +21,9 @@
   --darkgreen: #44891A;
   --lightgreen: #A3CE27;
 }
-
+button:hover{
+  cursor: url(/assets/CursorHand.png), auto;
+}
 .container{
   margin: auto;
 }
@@ -44,6 +46,7 @@ nav ul{
 }
 
 nav ul li:hover{
+  cursor: url(/assets/CursorHand.png), auto;
   text-decoration: underline;
   transition: .3s;
 }
@@ -68,6 +71,8 @@ nav ul li:hover{
 }
 .menu{
   flex-direction: column;
+  position: absolute;
+  top: 13%;
   z-index: 100;
   height: auto;
   margin: 10px 0;
@@ -94,10 +99,8 @@ nav ul li:hover{
 .plants-item.selected{
   background-color: var(--lightblue);
 }
-.plants-item:hover{
-  cursor: pointer;
-  transition: .3s;
-  background-color: var(--lightblue);
+.plants-item:hover, .plants-item img:hover, .plants-item p:hover{
+  cursor: url(/assets/CursorHand.png), auto;
 }
 .plants-item img{
   width: 60px;
@@ -133,10 +136,12 @@ nav ul li:hover{
   border: none;
 }
 .exchange-button.comprar:hover{
+  cursor: url(/assets/CursorHand.png), auto;
   background-color: var(--darkgreen);
   transition: .3s;
 }
 .exchange-button.vender:hover{
+  cursor: url(/assets/CursorHand.png), auto;
   background-color: var(--redwine);
   transition: .3s;
 }
@@ -182,7 +187,6 @@ nav ul li:hover{
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   text-align: center;
-  width: 600px;
   animation: slideIn 0.5s ease-out forwards;
 }
 
@@ -221,31 +225,39 @@ nav ul li:hover{
 
 .ul-items-buy{
   list-style: none;
-  margin: 20px;
+  margin: 20px auto;
   justify-content: center;
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 .item-buy{
+  border-radius: 20px;
   display: flex;
+  max-width: 250px;
+  max-height: 250px;
   flex-direction: column;
   justify-content: space-evenly;
   cursor: pointer;
-  background-color: var(--gray);
-  border-radius: 20px;
-  box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.247);
+  cursor: url(/assets/CursorHand.png), auto;
 }
 .item-buy img{
+  background-color: var(--gray);
+  border-radius: 20px;
+  padding: 5px;
   margin: 20px auto 0 auto;
+  cursor: url(/assets/CursorHand.png), auto;
 }
 .item-buy:hover{
-  background-color: gray;
+  background-color: #e4e4e4;
+  transition: .2s;
 }
 .item-info{
   display: flex;
   justify-content: center;
   gap: 10px;
   margin: 15px;
+  cursor: url(/assets/CursorHand.png), auto;
 }
 .item-sell{
   display: flex;
@@ -289,8 +301,8 @@ nav ul li:hover{
   margin: 0;
   padding: 0;
 }
-.object{
-  cursor: pointer;
+.fruto-item-list.object *:hover, .fruto-item-list.object:hover{
+  cursor: url(/assets/CursorHand.png), auto;
 }
 .object.active{
   background-color: var(--lightblue);

@@ -4,6 +4,7 @@ import styles from "./page.css";
 import { frutos as frutosData, oro as Gold, objects, semillas as semillasData} from "@/data/Semillas";
 import { useEffect, useState } from "react";
 import Game from "./Game"
+import { act } from "react";
 
 export default function Home() {
   const [oro, setOro] = useState(Gold);
@@ -62,19 +63,84 @@ export default function Home() {
       }, 2000);
     }
   }
-  
+
+  const [intervalId, setIntervalId] = useState(null); // Para almacenar el ID del intervalo
+  const [tiempoRestante, setTiempoRestante] = useState('');
+
   useEffect(() => {
-    if(JSON.parse(localStorage.getItem('objetos')) === null){
+    // Recuperar objetos y oro de localStorage
+    if (JSON.parse(localStorage.getItem('objetos')) === null) {
       localStorage.setItem('objetos', objects);
-    } else{
-      setObjetos(JSON.parse(localStorage.getItem('objetos')))
+    } else {
+      setObjetos(JSON.parse(localStorage.getItem('objetos')));
     }
-    if(JSON.parse(localStorage.getItem('oro')) === null){
+
+    if (JSON.parse(localStorage.getItem('oro')) === null) {
       localStorage.setItem('oro', oro);
-    } else{
-      setOro(JSON.parse(localStorage.getItem('oro')))
+    } else {
+      setOro(JSON.parse(localStorage.getItem('oro')));
     }
-  }, [])
+
+    // Recuperar la fecha de reclamación siguiente
+    let nextGoldClaim = localStorage.getItem('nextGoldClaim');
+    if (!nextGoldClaim) {
+      // Si no hay fecha, se establece la fecha de reclamación para 1 hora a partir de ahora
+      nextGoldClaim = new Date();
+      nextGoldClaim.setHours(nextGoldClaim.getHours() + 1);
+      localStorage.setItem('nextGoldClaim', nextGoldClaim);
+    }
+
+    const claimDate = new Date(nextGoldClaim);
+
+    // Iniciar el intervalo
+    const interval = setInterval(() => {
+      updateTimeRemaining(claimDate, interval);
+    }, 1000);
+
+    // Guardar el ID del intervalo
+    setIntervalId(interval);
+
+    // Limpiar el intervalo cuando el componente se desmonte
+    return () => clearInterval(interval);
+  }, []);
+
+  const updateTimeRemaining = (claimDate, interval) => {
+    const actualDate = new Date();
+    const diferenciaMs = claimDate - actualDate;
+
+    if (diferenciaMs > 0) {
+      // Calcular horas, minutos y segundos restantes
+      const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
+      const minutos = Math.floor((diferenciaMs % (1000 * 60 * 60)) / (1000 * 60));
+      const segundos = Math.floor((diferenciaMs % (1000 * 60)) / 1000);
+
+      // Actualizar el tiempo restante en la UI
+      setTiempoRestante(`${horas}hs ${minutos}min ${segundos}seg`);
+    } else {
+      // Cuando llega a 0, actualizar oro y restablecer la fecha de reclamación
+      setTiempoRestante('+100 de Oro!');
+
+      // Añadir oro
+      setOro((prevOro) => {
+        const newGoldAmount = prevOro + 100;
+        localStorage.setItem('oro', newGoldAmount);
+        return newGoldAmount;
+      });
+
+      // Actualizar la fecha de reclamación para dentro de 1 hora
+      const newClaimDate = new Date();
+      newClaimDate.setHours(newClaimDate.getHours() + 1);
+      localStorage.setItem('nextGoldClaim', newClaimDate);
+
+      // Reiniciar el intervalo
+      clearInterval(interval);
+      const newInterval = setInterval(() => {
+        updateTimeRemaining(newClaimDate, newInterval);
+      }, 1000);
+      setIntervalId(newInterval);
+    }
+  };
+
   useEffect(() => {
     localStorage.setItem('semillas', JSON.stringify(semillas));
     localStorage.setItem('frutos', JSON.stringify(frutos));
@@ -97,8 +163,19 @@ export default function Home() {
                             <img src={s.semillaSrc} alt={s.planta} width="80px"/>
                             <div className="product-info">
                               <div className="item-info">
-                                <p>Semillas de {s.planta}</p>
+                                <p>{s.planta}</p>
                                 <p>${s.valor}</p>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                        {objetos.map((o) => (
+                          <li className="item-buy" key={o.id} onClick={() => buyItem(o)}>
+                            <img src={o.objSrc} alt={o.objeto} width="80px"/>
+                            <div className="product-info">
+                              <div className="item-info">
+                                <p>{o.objeto}</p>
+                                <p>${o.valor}</p>
                               </div>
                             </div>
                           </li>
@@ -152,6 +229,7 @@ export default function Home() {
       <div className="game-menu">
         <aside className="menu">
           <h3 className="header-title" style={{textAlign: "center"}}>Inventario</h3>
+          <h4 style={{textAlign: "center", backgroundColor: "var(--darkblue)", padding: "10px 0", borderRadius: "10px", color: tiempoRestante === '+100 de Oro!' ? 'var(--yellow)' : 'white'}}>Oro Gratis: {tiempoRestante}</h4>
           <div className="oro-player">
             <img src="../assets/Coin.png" alt="Oro" width="80px"/>
             <p className="oro-data">{oro}</p>
@@ -163,7 +241,7 @@ export default function Home() {
           </div>
           <ul className="ul-menu">
               {semillas.map((s) => (
-                <li className={selectedSeed == s.id ? "plants-item selected" : "plants-item"} key={s.id} onClick={() => setSelectedSeed(s.id)}>
+                <li className={selectedSeed == s.id ? "plants-item selected" : "plants-item"} key={s.id} onClick={() => {setSelectedSeed(s.id); setSelectedObject(0);} }>
                   <img src={s.semillaSrc} alt={s.planta}/>
                   <span className="item-quantity">{s.semillas}</span>
                   <p>{s.planta} - {s.time / 100} Seg.</p>
@@ -179,7 +257,7 @@ export default function Home() {
               ))}
               {objetos.map((o) => (
                 o.cantidad === 0 ? "" : 
-                <li className={selectedObject === o.id ? "fruto-item-list object active" : "fruto-item-list object"} key={o.id} onClick={() => {selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}}>
+                <li className={selectedObject === o.id ? "fruto-item-list object active" : "fruto-item-list object"} key={o.id} onClick={() => {{selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}; setSelectedSeed(0)}}>
                   <img src={o.objSrc} alt={o.objeto} width="60px"/>
                   <span className="fruto-quantity">{o.cantidad}</span>
                 </li>
