@@ -1,13 +1,13 @@
 "use client"
-import { objects, oro, renderDivsConCultivos } from "@/data/Semillas";
+import { objects, objetos, oro, renderDivsConCultivos } from "@/data/Semillas";
 import game from "./game.css";
 import { useEffect, useState } from "react";
 import { act } from "react";
 
 const gridSize = 10;
 
-export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFrutos, objetos, setObjetos, selectedObject }) {
-
+export default function Game({ inventario, setInventario, selectedObject }) {
+    
     const [parcelas, setParcelas] = useState([]);
     const [cultivos, setCultivos] = useState([]);
 
@@ -31,52 +31,159 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
 
     function renderStoredParcelas(storedParcelas) {
         storedParcelas.forEach(p => {
-            const divsParcela = Array.from(document.querySelectorAll('.box')).find(div => div.id === p.id)
+            const divsParcela = Array.from(document.querySelectorAll('.box')).find(div => div.id == p)
             divsParcela.className = 'box-cultivo';
         })
     }
 
-    function convertGrassToDirt(semillas, plantToFarm, e, farmDate) {
-        const div = document.createElement('div'); // CREO UNA "PLANTA" DENTRO DE LA PARCELA
-        div.classList.add('cultivo'); // ESTABLEZCO LA CLASE CULTIVO PARA DIFERENCIARSE DE SU PADRE
-        div.setAttribute('id', e.id)
-        if(semillas[plantToFarm-1].id === 1){  // ESTABLEZCO ATRIBUTOS NECESARIOS PARA LA DIFERENCIACIÓN DE CULTIVO
-            div.style.background = 'url(/assets/Girasol1.png)';
-            div.classList.add('cultivated-girasol');
-        } else if(semillas[plantToFarm-1].id === 2){
-            div.style.background = 'url(/assets/Zanahoria1.png)';
-            div.classList.add('cultivated-zanahoria');
+    function convertDirtToGrass(object, e){
+        const cultivoHijo = e.querySelector('.cultivated') || null;
+        if(!e.className.includes('initial') && cultivoHijo === null){
+            e.className = 'box';
+
+            setParcelas(prevParcelas => {
+                const newParcelas = prevParcelas.filter(p => p.id !== e.id);
+                localStorage.setItem('parcelas', JSON.stringify(newParcelas));
+                return newParcelas;
+            })
+        } else {
+            alert('no se puede eliminar una parcela con cultivo/inicial')
         }
+    }
 
-        const pCountdown = document.createElement('p');
-        pCountdown.style.display = 'none';
-        pCountdown.classList.add('countdown');
-        div.appendChild(pCountdown);
+    function restarInventario(obj) {
+        setInventario(prevInventario => {
+            return prevInventario.map(item => {
+                if (item.id === obj.id) {
+                    const objModelo = objetos.find(o => o.id === obj.id);
+                    
+                    // Crear una copia del objeto a modificar
+                    let newItem = { ...item, vidaUtil: item.vidaUtil - 1 };
+    
+                    if (newItem.vidaUtil === 0) {
+                        newItem.cantidad -= 1;
+                        newItem.vidaUtil = newItem.cantidad > 0 ? objModelo.vidaUtil : 0;
+                    }
+    
+                    return newItem; // Devolvemos el objeto actualizado
+                }
+                return item; // Si no es el objeto buscado, lo devolvemos sin cambios
+            });
+        });
+    }
+    
 
-        const timerId = setInterval(() => {
-            const now = new Date().getTime();
-            const timeLeft = farmDate.getTime() - now;
-            if (timeLeft <= 0) {
-                clearInterval(timerId);
-                pCountdown.style.display = "none";
-                div.style.background = `url(/assets/${semillas[plantToFarm-1].planta}2.png)`;
-                div.classList.add('finished')
-            } else {
-                const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
-                const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
-                const seconds = Math.floor((timeLeft / 1000) % 60);
-                pCountdown.style.display = 'flex';
-                pCountdown.textContent = `${hours}h ${minutes}m ${seconds}s`;
+    function convertGrassToDirt(object, e) {
+        const obj = objetos.find(o => o.id === selectedObject);
+        if(object.type === 1) {
+
+            const div = document.createElement('div');
+            const now = new Date();
+            const farmDate = new Date(now.getTime()+object.time);
+            div.classList.add('cultivo'); // ESTABLEZCO LA CLASE CULTIVO PARA DIFERENCIARSE DE SU PADRE
+            div.setAttribute('id', e.id)
+            switch (object.id) {
+                case 1:
+                    div.style.background = 'url(/assets/Girasol1.png)';
+                    div.classList.add('cultivated-girasol');
+                    break;
+                case 2:
+                    div.style.background = 'url(/assets/Zanahoria1.png)';
+                    div.classList.add('cultivated-zanahoria');
+                    break;
             }
-        }, 1000); // ACTUALIZO EL TIEMPO RESTANTE PARA LA COSECHA
-        
-        return div;
+
+            const pCountdown = document.createElement('p');
+            pCountdown.classList.add('countdown');
+            pCountdown.style.display = 'none';
+
+            const timerId = setInterval(() => {
+
+                const nowDate = new Date();
+                const timeLeft = farmDate.getTime() - nowDate.getTime();
+
+                if (timeLeft <= 0) {
+                    pCountdown.style.display = "none";
+                    div.style.background = `url(/assets/${object.nombre.substring(11).trim()}2.png)`;
+                    div.classList.add('finished')
+                    clearInterval(timerId);
+
+                } else {
+                    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                    const minutes = Math.floor((timeLeft / (1000 * 60)) % 60);
+                    const seconds = Math.floor((timeLeft / 1000) % 60);
+
+                    pCountdown.style.display = 'flex';
+                    div.style.background = `url(/assets/${object.nombre.substring(11).trim()}1.png)`;
+                    pCountdown.textContent = `${hours}h ${minutes}m ${seconds}s`;
+                
+                }
+
+            }, 1000); 
+
+            div.appendChild(pCountdown);
+
+            const cultivo = {
+                planta: object.nombre.substring(11).trim(),
+                parcela: e.id,
+                farmDate: farmDate
+            }
+
+            setCultivos(prevCultivos => {
+                const newCultivos = [...prevCultivos, cultivo];
+                localStorage.setItem('cultivos', JSON.stringify(newCultivos));
+                return newCultivos;
+            })
+            
+            e.appendChild(div);
+
+            return div;
+            
+        } else if (object.type === 2) {
+            switch (object.nombre) {
+                case "Azada":
+                    
+                    if(e.className !== 'box-cultivo') {
+                        e.className = 'box-cultivo';
+                        setParcelas(prevParcelas => {
+                            const newParcelas = [...prevParcelas, e.id];
+                            localStorage.setItem('parcelas', JSON.stringify(newParcelas));
+                            return newParcelas;
+                        })
+                        restarInventario(obj)
+                        console.log(JSON.parse(localStorage.getItem('inventario')))
+                    }
+                    
+                    break;
+
+                case "Pala":
+
+                    if(!e.parentElement.className.includes('initial') && !e.className.includes('initial') && e.className !== 'box'){
+                        
+                        if(!e.className.includes('countdown') && e.className === 'box-cultivo' && !e.className.includes('finished')) {
+                            e.className = "box";
+                            setParcelas(prevParcelas => {
+                                const newParcelas = prevParcelas.filter(p => p !== e.id);
+                                localStorage.setItem('parcelas', JSON.stringify(newParcelas));
+                                return newParcelas;
+                            })
+                            restarInventario(obj)
+                        }
+                        
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    function convertFirstLetterUppercase(string){
+        return string.charAt(0).toUpperCase() + string.slice(1);
     }
 
     useEffect(() => {
         const storedParcelas = JSON.parse(localStorage.getItem('parcelas')) || []
         setParcelas(storedParcelas)
-        console.log(storedParcelas)
 
         renderStoredParcelas(storedParcelas)
         
@@ -89,94 +196,51 @@ export default function Game({ plantToFarm, semillas, setSemillas, frutos, setFr
             
             renderDivsConCultivos(divsConCultivos, storedCultivos)
         }
+
     }, []);
 
     function handlePlant(e) {
-        const updatedSemillas = [...semillas]; // OBTENGO LAS SEMILLAS EN FORMA DE ARRAY
-        const updatedFrutos = [...frutos]; // OBTENGO LOS FRUTOS EN FORMA DE ARRAY
-        const updatedObjetos = [...objetos]; // OBTENGO LOS OBJETOS EN FORMA DE ARRAY
-        if (
-            selectedObject === 0 && // VERIFICO QUE NO HAYA OBJETOS SELECCIONADOS
-            e.className.includes("box-cultivo") && // VERIFICO QUE SEA UNA PARCELA DE CULTIVO
-            e.className !== "box-cultivo cultivado" && // VERIFICO QUE NO ESTÉ CULTIVADA LA PARCELA
-            semillas[plantToFarm-1].semillas > 0 // VERIFICO QUE LA SEMILLA NO SEA 0 O MENOS
-        ) {
-            updatedSemillas[plantToFarm-1].semillas -= 1; //RESTO LAS SEMILLAS DE LA PLANTA SELECCIONADA
-            setSemillas(updatedSemillas); // ACTUALIZO EL LOCALSTORAGE DE SEMILLAS
-            
-            const date = new Date();
-            date.setSeconds(date.getSeconds() + (updatedSemillas[plantToFarm-1].time/100))
+        const obj = objetos.find(o => o.id === selectedObject) || {type: 0};
+        if(e.className.includes("box-cultivo") && !e.className.includes("cultivado") && obj.type !== 2)
+        {
 
-            const div = convertGrassToDirt(semillas, plantToFarm, e, date);
-            e.appendChild(div) // AÑADO EL CULTIVO A SU PARCELA PADRE 
+            setInventario(prevInventario =>
+                {
+                    const nuevoInventario = prevInventario.map(item =>
+                    item.id === obj.id ? { ...item, cantidad: item.cantidad-1 } : item
+                    );
+                    return nuevoInventario;
+                }
+            );
+            convertGrassToDirt(obj, e)
 
-            const cultivo = {
-                parcela: e.id,
-                type: semillas[plantToFarm-1].id,
-                farmDate: date
-            }
-            
-            setCultivos(prevCultivos => {
-                const nuevosCultivos = [...prevCultivos, cultivo];
-                localStorage.setItem('cultivos', JSON.stringify(nuevosCultivos));
-                return nuevosCultivos;
-            });
+        } else if (e.className.includes("finished") && obj.type !== 2) { // CONSULTO SI EL CULTIVO ES ZANAHORIA O GIRASOL PARA SU RECOLECCION
 
-        } else if (e.className.includes("finished")) { // CONSULTO SI EL CULTIVO ES ZANAHORIA O GIRASOL PARA SU RECOLECCION
-            const plantIndex = e.className.includes("girasol") ? 0 : 1;
-            updatedFrutos[plantIndex].cantidad += 1;
-            setFrutos(updatedFrutos);
+            const farmedPlant = objetos.filter(obj => obj.nombre === convertFirstLetterUppercase(e.className.split('-')[1].split(' ')[0]))[0];
+            setInventario(prevInventario =>
+                {
+                  const existe = prevInventario.some(o => o.id === farmedPlant.id);
+        
+                  const nuevoInventario = existe ? 
+                    prevInventario.map(obj => obj.id === farmedPlant.id ? {...obj, cantidad: obj.cantidad+1 } : obj)
+                  :
+                    [...prevInventario, {...farmedPlant, cantidad: 1}]
+        
+                  return nuevoInventario;
+                }
+            );
+              localStorage.setItem('inventario', JSON.stringify(inventario))
             e.remove();
             setCultivos(cultivos => {
                 const nuevosCultivos = cultivos.filter(c => c.parcela.toString() !== e.id);
                 localStorage.setItem('cultivos', JSON.stringify(nuevosCultivos));
                 return nuevosCultivos;
             });
-        } else if(selectedObject !== 0) {
-            switch (selectedObject){
-                case 1:
-                    if(updatedObjetos[selectedObject-1].cantidad >= 1 && e.className === 'box')
-                    {
-                        e.className = 'box-cultivo';
-                        setParcelas(prevParcelas => {
-                            const nuevasParcelas = [...prevParcelas, {id: e.id}];
-                            localStorage.setItem('parcelas', JSON.stringify(nuevasParcelas));
-                            return nuevasParcelas;
-                        })
-                        updatedObjetos[selectedObject-1].vidaUtil -= 1
-                        if(updatedObjetos[selectedObject-1].vidaUtil === 0){
-                            updatedObjetos[selectedObject-1].cantidad -= 1;
-                            updatedObjetos[selectedObject-1].vidaUtil = 5;
-                        }
-                        setObjetos(updatedObjetos)
-                        localStorage.setItem("objetos", JSON.stringify(updatedObjetos));
-                        localStorage.setItem("parcelas", JSON.stringify(parcelas));
-                        console.log(updatedObjetos)
-                    }
-                    break;
-                case 2:
-                    if(updatedObjetos[selectedObject-1].cantidad >= 1 && e.className === 'box-cultivo')
-                    {
-                        e.className = 'box';
-                        setParcelas(prevParcelas => {
-                            const nuevasParcelas = prevParcelas.filter(p => p.id !== e.id);
-                            localStorage.setItem('parcelas', JSON.stringify(nuevasParcelas));
-                            return nuevasParcelas;
-                        })
-                        updatedObjetos[selectedObject-1].vidaUtil -= 1
-                        if(updatedObjetos[selectedObject-1].vidaUtil === 0){
-                            updatedObjetos[selectedObject-1].cantidad -= 1;
-                            updatedObjetos[selectedObject-1].vidaUtil = 5;
-                        }
-                        setObjetos(updatedObjetos)
-                        localStorage.setItem("objetos", JSON.stringify(updatedObjetos));
-                        localStorage.setItem("parcelas", JSON.stringify(parcelas));
-                    } else if(e.className.includes('initial')){
-                        alert('No puedes eliminar una parcela Inicial')
-                    }
-            }
+        } else if (obj.type === 2) {
+
+            convertGrassToDirt(obj, e)
         }
-        localStorage.setItem('cultivos', JSON.stringify(cultivos))
+        
     }
     
     return (

@@ -238,7 +238,6 @@ nav ul li:hover{
   flex-direction: column;
   justify-content: space-evenly;
   cursor: pointer;
-  cursor: url(/assets/CursorHand.png), auto;
 }
 .item-buy img{
   background-color: var(--gray);
@@ -248,6 +247,7 @@ nav ul li:hover{
   cursor: url(/assets/CursorHand.png), auto;
 }
 .item-buy:hover{
+  cursor: url(/assets/CursorHand.png), auto;
   background-color: #e4e4e4;
   transition: .2s;
 }
@@ -300,9 +300,9 @@ nav ul li:hover{
   margin: 0;
   padding: 0;
 }
-.fruto-item-list.object *:hover, .fruto-item-list.object:hover{
+.fruto-item-list *:hover, .fruto-item-list:hover{
   cursor: url(/assets/CursorHand.png), auto;
 }
-.object.active{
+.active{
   background-color: var(--lightblue);
 }

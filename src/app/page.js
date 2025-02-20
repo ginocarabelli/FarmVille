@@ -1,29 +1,19 @@
 "use client"
 import styles from "./page.css";
-import { frutos as frutosData, oro as Gold, objects, semillas as semillasData} from "@/data/Semillas";
+import { objetos, inventario as Inventario, oro as Gold} from "@/data/Semillas";
 import { useEffect, useState } from "react";
 import Game from "./Game"
 
 export default function Home() {
   const [oro, setOro] = useState(Gold);
   const [mensaje, setMensaje] = useState("");
-  const [frutos, setFrutos] = useState(() => {
-    const storedFrutos = JSON.parse(localStorage.getItem('frutos'));
-    return storedFrutos || frutosData;
-  })
-  const [semillas, setSemillas] = useState(() => {
-    const storedSemillas = JSON.parse(localStorage.getItem('semillas'));
-    return storedSemillas || semillasData;
-  })
   const [selectedObject, setSelectedObject] = useState(0);
-  const [objetos, setObjetos] = useState(objects);
+  const [inventario, setInventario] = useState(Inventario);
 
   const [isOpen, setIsOpen] = useState(false);
   const [modalMode, setModalMode] = useState(0);
-  
-  const [selectedSeed, setSelectedSeed] = useState(1);
 
-  const [intervalId, setIntervalId] = useState(null); // Para almacenar el ID del intervalo
+  const [intervalId, setIntervalId] = useState(null);
   const [tiempoRestante, setTiempoRestante] = useState('');
 
   const updateTimeRemaining = (claimDate, interval) => {
@@ -66,27 +56,24 @@ export default function Home() {
   function buyItem(product){
     if(oro >= product.valor){
       const newGold = oro - product.valor;
-      switch(product.type){
-        case 1:
-          let semillas = JSON.parse(localStorage.getItem('semillas'));
-          semillas[product.id-1].semillas += 1;
+      setOro(newGold)
+      setInventario(prevInventario =>
+        {
+          const existe = prevInventario.some(o => o.id === product.id);
 
-          setOro(newGold)
-          setSemillas(semillas);
-          localStorage.setItem('oro', newGold);
-          localStorage.setItem('semillas', JSON.stringify(semillas))
-          break;
-        case 3:
-          let objetos = JSON.parse(localStorage.getItem('objetos'));
-          objetos[product.id-1].cantidad += 1;
+          const nuevoInventario = existe ? 
+            prevInventario.map(obj => obj.id === product.id ? {...obj, cantidad: obj.cantidad+1, vidaUtil: product.vidaUtil } : obj)
+          :
+            [...prevInventario, {...product, cantidad: 1}]
 
-          setOro(newGold)
-          setObjetos(objetos);
-          localStorage.setItem('oro', newGold);
-          localStorage.setItem('objetos', JSON.stringify(objetos))
-      }
+          return nuevoInventario;
+        }
+      );
+      localStorage.setItem('oro', newGold);
+      localStorage.setItem('inventario', JSON.stringify(inventario))
+
     } else{
-      setMensaje("No tienes dinero suficiente!"); // Oculta el mensaje después de 2 segundos
+      setMensaje("No tienes oro suficiente!"); // Oculta el mensaje después de 2 segundos
       setTimeout(() => {
         setMensaje("");
       }, 2000);
@@ -94,29 +81,34 @@ export default function Home() {
   }
 
   function sellItem(product){
-    if(product.cantidad >= 1){
-      let frutos = JSON.parse(localStorage.getItem('frutos'));
-      frutos[product.id-1].cantidad -= 1;
-
+    if(inventario.filter(i => i.id === product.id)[0]?.cantidad >= 1){
       const newGold = oro + product.valor;
       setOro(newGold)
-      setFrutos(frutos);
+      setInventario(prevInventario =>
+        {
+          const nuevoInventario = prevInventario.map(item =>
+            item.id === product.id ? { ...item, cantidad: item.cantidad-1 } : item
+          );
+          return nuevoInventario;
+        }
+      );
       localStorage.setItem('oro', newGold);
-      localStorage.setItem('frutos', JSON.stringify(frutos))
+      localStorage.setItem('inventario', JSON.stringify(inventario))
     } else{
-      setMensaje("No tienes plantas suficiente!"); // Oculta el mensaje después de 2 segundos
+      setMensaje(`No tienes objetos suficientes!`); // Oculta el mensaje después de 2 segundos
       setTimeout(() => {
         setMensaje("");
       }, 2000);
     }
   }
 
+  // RECLAMO DE ORO AUTOMÁTICO
   useEffect(() => {
     // Recuperar objetos y oro de localStorage
-    if (JSON.parse(localStorage.getItem('objetos')) === null) {
-      localStorage.setItem('objetos', objects);
+    if (JSON.parse(localStorage.getItem('inventario')) === null) {
+      localStorage.setItem('inventario', inventario);
     } else {
-      setObjetos(JSON.parse(localStorage.getItem('objetos')));
+      setInventario(JSON.parse(localStorage.getItem('inventario')));
     }
 
     if (JSON.parse(localStorage.getItem('oro')) === null) {
@@ -148,11 +140,10 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
+  // QUE SE EJECUTA CADA VEZ QUE CAMBIA EL INVENTARIO
   useEffect(() => {
-    localStorage.setItem('semillas', JSON.stringify(semillas));
-    localStorage.setItem('frutos', JSON.stringify(frutos));
-    localStorage.setItem('objetos', JSON.stringify(objetos));
-  }, [semillas, frutos, objetos])
+    localStorage.setItem('inventario', JSON.stringify(inventario));
+  }, [inventario])
 
   return (
     <div className="container">
@@ -169,25 +160,18 @@ export default function Home() {
             <button className="exchange-button vender" onClick={() => {setIsOpen(true); setModalMode(2)}}>Vender</button>
           </div>
           <ul className="ul-menu">
-              {semillas.map((s) => (
-                <li className={selectedSeed == s.id ? "plants-item selected" : "plants-item"} key={s.id} onClick={() => {setSelectedSeed(s.id); setSelectedObject(0);} }>
-                  <img src={s.semillaSrc} alt={s.planta}/>
-                  <span className="item-quantity">{s.semillas}</span>
-                  <p>{s.planta} - {s.time / 100} Seg.</p>
+              {inventario.filter(o => o.type === 1 && o.cantidad > 0).map((o) => (
+                <li className={selectedObject == o.id ? "plants-item active" : "plants-item"} key={o.id} onClick={() => selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id) }>
+                  <img src={o.src} alt={o.nombre}/>
+                  <span className="item-quantity">{o.cantidad}</span>
+                  <p>{o.nombre} - {o.time} Seg.</p>
                 </li>
               ))}
           </ul>
           <ul className="ul-frutos-menu">
-              {frutos.map((f) => (
-                <li className="fruto-item-list" key={f.id}>
-                  <img src={f.plantaSrc} alt={f.semilla.planta} width="60px"/>
-                  <span className="fruto-quantity">{f.cantidad}</span>
-                </li>
-              ))}
-              {objetos.map((o) => (
-                o.cantidad === 0 ? "" : 
-                <li className={selectedObject === o.id ? "fruto-item-list object active" : "fruto-item-list object"} key={o.id} onClick={() => {{selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}; setSelectedSeed(0)}}>
-                  <img src={o.objSrc} alt={o.objeto} width="60px"/>
+              {inventario.filter(o => (o.type === 2 || o.type === 3) && (o.cantidad > 0 || o.vidaUtil !== 0)).map(o => (
+                <li className={selectedObject === o.id && o.type !== 3 ? "fruto-item-list active" : "fruto-item-list"} key={o.id} onClick={() => selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}>
+                  <img src={o.src} alt={o.nombre} width="60px"/>
                   <span className="fruto-quantity">{o.cantidad}</span>
                 </li>
               ))}
@@ -200,23 +184,12 @@ export default function Home() {
                   {modalMode === 1 ? 
                     <div className="items-container">
                       <ul className="ul-items-buy">
-                        {semillas.map((s) => (
-                          <li className="item-buy" key={s.id} onClick={() => buyItem(s)}>
-                            <img src={s.semillaSrc} alt={s.planta} width="80px"/>
-                            <div className="product-info">
-                              <div className="item-info">
-                                <p>{s.planta}</p>
-                                <p>${s.valor}</p>
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                        {objetos.map((o) => (
+                        {objetos.filter(o => o.type === 1 || o.type === 2).map(o => (
                           <li className="item-buy" key={o.id} onClick={() => buyItem(o)}>
-                            <img src={o.objSrc} alt={o.objeto} width="80px"/>
+                            <img src={o.src} alt={o.nombre} width="80px"/>
                             <div className="product-info">
                               <div className="item-info">
-                                <p>{o.objeto}</p>
+                                <p>{o.nombre}</p>
                                 <p>${o.valor}</p>
                               </div>
                             </div>
@@ -228,18 +201,18 @@ export default function Home() {
                   :
                   <div className="items-container">
                     <ul className="ul-items-buy">
-                      {frutos.map((f) => (
-                        <div className="sell-container-item" key={f.id}>
-                          <li className="item-buy" onClick={() => sellItem(f)}>
-                            <img src={f.plantaSrc} alt={f.semilla.planta} width="80px"/>
+                      {objetos.filter(o => o.type !== 1).map((o) => (
+                        <div className="sell-container-item" key={o.id}>
+                          <li className="item-buy" onClick={() => sellItem(o)}>
+                            <img src={o.src} alt={o.nombre} width="80px"/>
                             <div className="product-info">
                               <div className="item-info">
-                                <p>{f.semilla.planta}</p>
-                                <p>${f.valor}</p>
+                                <p>{o.nombre}</p>
+                                <p>${o.valor}</p>
                               </div>
                             </div>
                           </li>
-                          <p>Tienes: {f.cantidad}</p>
+                          <p>Tienes: {inventario.filter(i => i.id === o.id)[0]?.cantidad || 0}</p>
                         </div>
                       ))}
                     </ul>
@@ -267,12 +240,8 @@ export default function Home() {
       </header>
       <div className="game-menu">
         <Game 
-        plantToFarm={selectedSeed} 
-        semillas={semillas} setSemillas={setSemillas} 
-        frutos={frutos} setFrutos={setFrutos} 
-        objetos={objetos} setObjetos={setObjetos} selectedObject={selectedObject}
-        tiempoRestante={tiempoRestante} setTiempoRestante={setTiempoRestante}
-        intervalId={intervalId} setIntervalId={setIntervalId}
+          inventario={inventario} setInventario={setInventario}
+          selectedObject={selectedObject}
         />
       </div>
     </div>
