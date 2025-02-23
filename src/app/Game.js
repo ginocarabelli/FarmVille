@@ -31,51 +31,50 @@ export default function Game({ inventario, setInventario, selectedObject }) {
 
     function renderStoredParcelas(storedParcelas) {
         storedParcelas.forEach(p => {
-            const divsParcela = Array.from(document.querySelectorAll('.box')).find(div => div.id == p)
-            divsParcela.className = 'box-cultivo';
+            const divParcela = Array.from(document.querySelectorAll('.box')).find(div => div.id == p.id)
+            switch(p.type) {
+                case 1: 
+                    divParcela.className = 'box-cultivo';
+                    break;
+                case 2:
+                    divParcela.className = 'box decorated';
+                    divParcela.innerHTML = `
+                       <div class="decoracion decorated-${p.deco.nombre}" id=${p.id} style="background: url(${p.deco.src});"></div> 
+                    `
+                    break;
+            }
         })
-    }
-
-    function convertDirtToGrass(object, e){
-        const cultivoHijo = e.querySelector('.cultivated') || null;
-        if(!e.className.includes('initial') && cultivoHijo === null){
-            e.className = 'box';
-
-            setParcelas(prevParcelas => {
-                const newParcelas = prevParcelas.filter(p => p.id !== e.id);
-                localStorage.setItem('parcelas', JSON.stringify(newParcelas));
-                return newParcelas;
-            })
-        } else {
-            alert('no se puede eliminar una parcela con cultivo/inicial')
-        }
     }
 
     function restarInventario(obj) {
         setInventario(prevInventario => {
-            return prevInventario.map(item => {
+            const nuevoInventario = prevInventario.map(item => {
                 if (item.id === obj.id) {
                     const objModelo = objetos.find(o => o.id === obj.id);
                     
                     // Crear una copia del objeto a modificar
                     let newItem = { ...item, vidaUtil: item.vidaUtil - 1 };
     
-                    if (newItem.vidaUtil === 0) {
+                    if (newItem.vidaUtil <= 0) {
                         newItem.cantidad -= 1;
                         newItem.vidaUtil = newItem.cantidad > 0 ? objModelo.vidaUtil : 0;
                     }
     
-                    return newItem; // Devolvemos el objeto actualizado
+                    return newItem;
                 }
-                return item; // Si no es el objeto buscado, lo devolvemos sin cambios
+                return item;
             });
+            
+            return nuevoInventario; // Devolvemos el inventario actualizado
         });
+        localStorage.setItem('inventario', JSON.stringify(inventario));
+        return inventario; 
     }
     
-
+    
     function convertGrassToDirt(object, e) {
         const obj = objetos.find(o => o.id === selectedObject);
-        if(object.type === 1) {
+        if(object.type === 1 && object.cantidad >= 1) {
 
             const div = document.createElement('div');
             const now = new Date();
@@ -139,19 +138,18 @@ export default function Game({ inventario, setInventario, selectedObject }) {
 
             return div;
             
-        } else if (object.type === 2) {
+        } else if (object.type === 2 && object.cantidad >= 1) {
             switch (object.nombre) {
                 case "Azada":
                     
                     if(e.className !== 'box-cultivo') {
                         e.className = 'box-cultivo';
                         setParcelas(prevParcelas => {
-                            const newParcelas = [...prevParcelas, e.id];
+                            const newParcelas = [...prevParcelas, {id: e.id, type: 1}];
                             localStorage.setItem('parcelas', JSON.stringify(newParcelas));
                             return newParcelas;
                         })
                         restarInventario(obj)
-                        console.log(JSON.parse(localStorage.getItem('inventario')))
                     }
                     
                     break;
@@ -163,7 +161,32 @@ export default function Game({ inventario, setInventario, selectedObject }) {
                         if(!e.className.includes('countdown') && e.className === 'box-cultivo' && !e.className.includes('finished')) {
                             e.className = "box";
                             setParcelas(prevParcelas => {
-                                const newParcelas = prevParcelas.filter(p => p !== e.id);
+                                const newParcelas = prevParcelas.filter(p => p.id !== e.id);
+                                localStorage.setItem('parcelas', JSON.stringify(newParcelas));
+                                return newParcelas;
+                            })
+                            restarInventario(obj)
+                        }
+                        if(e.className.includes('decorated')){
+                            const decorationRemoved = e.className.split(' ')[1].split('-')[1];
+                            const decoration = objetos.filter(o => o.nombre === decorationRemoved)[0];
+                            setInventario(prevInventario =>
+                                {
+                                  const existe = prevInventario.some(o => o.id === decoration.id);
+                        
+                                  const nuevoInventario = existe ? 
+                                    prevInventario.map(obj => obj.id === decoration.id ? {...obj, cantidad: obj.cantidad+1 } : obj)
+                                  :
+                                    [...prevInventario, {...decoration, cantidad: 1}]
+                        
+                                  return nuevoInventario;
+                                }
+                            );
+                            localStorage.setItem('inventario', JSON.stringify(inventario))
+                            
+                            e.className = "box";
+                            setParcelas(prevParcelas => {
+                                const newParcelas = prevParcelas.filter(p => p.id !== e.id);
                                 localStorage.setItem('parcelas', JSON.stringify(newParcelas));
                                 return newParcelas;
                             })
@@ -174,6 +197,25 @@ export default function Game({ inventario, setInventario, selectedObject }) {
 
                     break;
             }
+        }
+    }
+
+    function placeDecorations(object, e) {
+        if(e.className === "box" && !e.className.includes('decorated') && !e.className.includes('box-cultivo')) {
+            restarInventario(object)
+            const div = document.createElement('div');
+            div.classList.add('decoracion'); // ESTABLEZCO LA CLASE CULTIVO PARA DIFERENCIARSE DE SU PADRE
+            div.setAttribute('id', e.id)
+            e.classList.add('decorated')
+            div.style.background = `url(${object.src})`;
+            div.classList.add(`decorated-${object.nombre}`);
+            e.appendChild(div)
+
+            setParcelas(prevParcelas => {
+                const newParcelas = [...prevParcelas, {id: e.id, type: 2, deco: object}];
+                localStorage.setItem('parcelas', JSON.stringify(newParcelas));
+                return newParcelas;
+            })
         }
     }
 
@@ -188,6 +230,7 @@ export default function Game({ inventario, setInventario, selectedObject }) {
         renderStoredParcelas(storedParcelas)
         
         const storedCultivos = JSON.parse(localStorage.getItem('cultivos'));
+        const storedDecorations = JSON.parse(localStorage.getItem('decorations'));
 
         if (storedCultivos !== null) {
             setCultivos(storedCultivos);
@@ -196,26 +239,30 @@ export default function Game({ inventario, setInventario, selectedObject }) {
             
             renderDivsConCultivos(divsConCultivos, storedCultivos)
         }
+        if(storedDecorations !== null) {
+            const divs = document.querySelectorAll('.decorated');
+            const divsConDecoracion = Array.from(divs).filter(div => storedDecorations.some(deco => deco.parcela === div.id.toString()));
+            
+            divsConDecoracion.forEach(div => {
+                const respectivaDeco = storedDecorations.filter(d => d.parcela === div.id)
+                
+                div.innerHTML = `
+                    <div class="box decorated" id=${respectivaDeco[0].parcela} style="background: url(../assets/${respectivaDeco[0].src}.png);">
+                    </div>
+                `;
+            });
+        }
 
     }, []);
 
     function handlePlant(e) {
-        const obj = objetos.find(o => o.id === selectedObject) || {type: 0};
-        if(e.className.includes("box-cultivo") && !e.className.includes("cultivado") && obj.type !== 2)
+        const obj = inventario.find(o => o.id === selectedObject) || {type: 0};
+
+        if(e.className.includes("box-cultivo") && !e.className.includes("cultivado") && (obj.type === 1 || obj.type === 0))
         {
-
-            setInventario(prevInventario =>
-                {
-                    const nuevoInventario = prevInventario.map(item =>
-                    item.id === obj.id ? { ...item, cantidad: item.cantidad-1 } : item
-                    );
-                    return nuevoInventario;
-                }
-            );
+            restarInventario(obj)
             convertGrassToDirt(obj, e)
-
-        } else if (e.className.includes("finished") && obj.type !== 2) { // CONSULTO SI EL CULTIVO ES ZANAHORIA O GIRASOL PARA SU RECOLECCION
-
+        } else if (e.className.includes("finished") && (obj.type === 1 || obj.type === 0)) { // CONSULTO SI EL CULTIVO ES ZANAHORIA O GIRASOL PARA SU RECOLECCION
             const farmedPlant = objetos.filter(obj => obj.nombre === convertFirstLetterUppercase(e.className.split('-')[1].split(' ')[0]))[0];
             setInventario(prevInventario =>
                 {
@@ -229,16 +276,20 @@ export default function Game({ inventario, setInventario, selectedObject }) {
                   return nuevoInventario;
                 }
             );
-              localStorage.setItem('inventario', JSON.stringify(inventario))
+            localStorage.setItem('inventario', JSON.stringify(inventario))
             e.remove();
             setCultivos(cultivos => {
                 const nuevosCultivos = cultivos.filter(c => c.parcela.toString() !== e.id);
                 localStorage.setItem('cultivos', JSON.stringify(nuevosCultivos));
                 return nuevosCultivos;
             });
-        } else if (obj.type === 2) {
-
+        } else if (!e.className.includes("finished") && obj.type === 2) {
             convertGrassToDirt(obj, e)
+        } else if(obj.type === 4) {
+            
+            if(obj.cantidad >= 1){
+                placeDecorations(obj, e)
+            }
         }
         
     }

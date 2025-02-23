@@ -81,11 +81,6 @@ nav ul li:hover{
   padding: 20px;
   background-color: var(--darkestblue);
 }
-.ul-menu{
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
 .plants-item{
   position: relative;
   display: flex;
@@ -106,7 +101,6 @@ nav ul li:hover{
 }
 .plants-item p{
   align-items: center;
-  width: 100%;
   display: flex;
   justify-content: space-between;
 }
@@ -222,9 +216,14 @@ nav ul li:hover{
   }
 }
 
+.items-container{
+  display: flex;
+  gap: 5px;
+  flex-direction: column;
+}
 .ul-items-buy{
   list-style: none;
-  margin: 20px auto;
+  margin: 0 auto;
   justify-content: center;
   display: flex;
   gap: 20px;
@@ -233,8 +232,9 @@ nav ul li:hover{
 .item-buy{
   border-radius: 20px;
   display: flex;
-  max-width: 250px;
-  max-height: 250px;
+  max-width: 180px;
+  max-height: 180px;
+  text-wrap: wrap;
   flex-direction: column;
   justify-content: space-evenly;
   cursor: pointer;
@@ -253,6 +253,7 @@ nav ul li:hover{
 }
 .item-info{
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 10px;
   margin: 15px;
@@ -277,7 +278,7 @@ nav ul li:hover{
 .ul-frutos-menu{
   color: white;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: .85fr .85fr;
   gap: 10px;
 }
 .fruto-item-list{

@@ -30,7 +30,7 @@ export default function Home() {
       setTiempoRestante(`${horas}hs ${minutos}min ${segundos}seg`);
     } else {
       // Cuando llega a 0, actualizar oro y restablecer la fecha de reclamación
-      setTiempoRestante('+100 de Oro!');
+      setTiempoRestante('+50 de Oro!');
 
       // Añadir oro
       setOro((prevOro) => {
@@ -147,29 +147,41 @@ export default function Home() {
 
   return (
     <div className="container">
+      
       <aside className="menu">
           <h3 className="header-title" style={{textAlign: "center"}}>Inventario</h3>
-          <h4 style={{textAlign: "center", backgroundColor: "var(--darkblue)", padding: "10px 0", borderRadius: "10px", color: tiempoRestante === '+100 de Oro!' ? 'var(--yellow)' : 'white'}}>Oro Gratis: {tiempoRestante}</h4>
+          <h4 style={{ fontSize: "15px",textAlign: "center", backgroundColor: "var(--darkblue)", padding: "10px 0", borderRadius: "10px", color: tiempoRestante === '+50 de Oro!' ? 'var(--yellow)' : 'white'}}>Oro Gratis: {tiempoRestante}</h4>
           <div className="oro-player">
             <img src="../assets/Coin.png" alt="Oro" width="80px"/>
-            <p className="oro-data">{oro}</p>
+            <h4 className="oro-data">{oro}</h4>
           </div>
           
           <div className="exchange-zone">
             <button className="exchange-button comprar" onClick={() => {setIsOpen(true); setModalMode(1)}}>Comprar</button>
             <button className="exchange-button vender" onClick={() => {setIsOpen(true); setModalMode(2)}}>Vender</button>
           </div>
-          <ul className="ul-menu">
+          <p>Semillas</p>
+          <ul className="ul-frutos-menu">
               {inventario.filter(o => o.type === 1 && o.cantidad > 0).map((o) => (
                 <li className={selectedObject == o.id ? "plants-item active" : "plants-item"} key={o.id} onClick={() => selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id) }>
                   <img src={o.src} alt={o.nombre}/>
                   <span className="item-quantity">{o.cantidad}</span>
-                  <p>{o.nombre} - {o.time} Seg.</p>
+                  <p>{(o.time/1000)/60} min.</p>
                 </li>
               ))}
           </ul>
+          <p>Plantas</p>
           <ul className="ul-frutos-menu">
-              {inventario.filter(o => (o.type === 2 || o.type === 3) && (o.cantidad > 0 || o.vidaUtil !== 0)).map(o => (
+              {inventario.filter(o => o.type === 3 && o.cantidad > 0).map((o) => (
+                <li className={selectedObject === o.id && o.type !== 3 ? "fruto-item-list active" : "fruto-item-list"} key={o.id} onClick={() => selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}>
+                  <img src={o.src} alt={o.nombre} width="60px"/>
+                  <span className="fruto-quantity">{o.cantidad}</span>
+                </li>
+              ))}
+          </ul>
+          <p>Objetos / Decoraciones</p>
+          <ul className="ul-frutos-menu">
+              {inventario.filter(o => (o.type !== 1 && o.type !== 3) && (o.cantidad > 0 || o.vidaUtil !== 0)).map(o => (
                 <li className={selectedObject === o.id && o.type !== 3 ? "fruto-item-list active" : "fruto-item-list"} key={o.id} onClick={() => selectedObject === o.id ? setSelectedObject(0) : setSelectedObject(o.id)}>
                   <img src={o.src} alt={o.nombre} width="60px"/>
                   <span className="fruto-quantity">{o.cantidad}</span>
@@ -183,8 +195,37 @@ export default function Home() {
                   <h2 style={{display: "flex", alignItems: "center", justifyContent: "center", gap: "10px"}}>{modalMode === 1 ? 'COMPRAR' : 'VENDER'} <span style={{display: "flex", alignItems: "center"}}><img src="../assets/Coin.png" alt="Oro" width="50px" /> {oro}</span></h2>
                   {modalMode === 1 ? 
                     <div className="items-container">
+                      <h3>Semillas</h3>
                       <ul className="ul-items-buy">
-                        {objetos.filter(o => o.type === 1 || o.type === 2).map(o => (
+                        {objetos.filter(o => o.type === 1).map(o => (
+                          <li className="item-buy" key={o.id} onClick={() => buyItem(o)}>
+                            <img src={o.src} alt={o.nombre} width="80px"/>
+                            <div className="product-info">
+                              <div className="item-info">
+                                <p>{o.nombre}</p>
+                                <p>${o.valor}</p>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      <h3>Objetos</h3>
+                      <ul className="ul-items-buy">
+                        {objetos.filter(o => o.type === 2).map(o => (
+                          <li className="item-buy" key={o.id} onClick={() => buyItem(o)}>
+                            <img src={o.src} alt={o.nombre} width="80px"/>
+                            <div className="product-info">
+                              <div className="item-info">
+                                <p>{o.nombre}</p>
+                                <p>${o.valor}</p>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      <h3>Decoraciones</h3>
+                      <ul className="ul-items-buy">
+                        {objetos.filter(o => o.type === 4).map(o => (
                           <li className="item-buy" key={o.id} onClick={() => buyItem(o)}>
                             <img src={o.src} alt={o.nombre} width="80px"/>
                             <div className="product-info">
@@ -201,7 +242,7 @@ export default function Home() {
                   :
                   <div className="items-container">
                     <ul className="ul-items-buy">
-                      {objetos.filter(o => o.type !== 1).map((o) => (
+                      {objetos.filter(o => o.type === 3).map((o) => (
                         <div className="sell-container-item" key={o.id}>
                           <li className="item-buy" onClick={() => sellItem(o)}>
                             <img src={o.src} alt={o.nombre} width="80px"/>
@@ -230,7 +271,7 @@ export default function Home() {
         <nav>
           <ul>
             <li>
-              <a href="#">How to play</a>
+                <a href="#">How to play</a>
             </li>
             <li>
               <a href="#">Portfolio</a>
